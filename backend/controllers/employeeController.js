@@ -1,0 +1,153 @@
+import Employee from '../models/Employee.js';
+
+// Get all employees with optional search filters
+export const getEmployees = async (req, res) => {
+  try {
+    const { name, department } = req.query;
+    let filter = {};
+
+    if (name) {
+      filter.name = { $regex: name, $options: 'i' };
+    }
+    if (department) {
+      filter.department = { $regex: department, $options: 'i' };
+    }
+
+    const employees = await Employee.find(filter).sort({ createdAt: -1 });
+    res.status(200).json({
+      success: true,
+      count: employees.length,
+      data: employees
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+// Get a single employee by ID
+export const getEmployeeById = async (req, res) => {
+  try {
+    const employee = await Employee.findById(req.params.id);
+    if (!employee) {
+      return res.status(404).json({
+        success: false,
+        message: 'Employee not found'
+      });
+    }
+    res.status(200).json({
+      success: true,
+      data: employee
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+// Create a new employee
+export const createEmployee = async (req, res) => {
+  try {
+    const { name, role, department, email } = req.body;
+
+    if (!name || !role || !department || !email) {
+      return res.status(400).json({
+        success: false,
+        message: 'All fields (name, role, department, email) are required'
+      });
+    }
+
+    const newEmployee = await Employee.create({
+      name,
+      role,
+      department,
+      email
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Employee created successfully',
+      data: newEmployee
+    });
+  } catch (error) {
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email already exists'
+      });
+    }
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+// Update an employee
+export const updateEmployee = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, role, department, email } = req.body;
+
+    const updatedEmployee = await Employee.findByIdAndUpdate(
+      id,
+      { name, role, department, email },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedEmployee) {
+      return res.status(404).json({
+        success: false,
+        message: 'Employee not found'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Employee updated successfully',
+      data: updatedEmployee
+    });
+  } catch (error) {
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email already exists'
+      });
+    }
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+// Delete an employee
+export const deleteEmployee = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const deletedEmployee = await Employee.findByIdAndDelete(id);
+
+    if (!deletedEmployee) {
+      return res.status(404).json({
+        success: false,
+        message: 'Employee not found'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Employee deleted successfully',
+      data: deletedEmployee
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
